@@ -13,6 +13,7 @@ command_thread = Thread.new do
   end
 end
 while pass != "stop" do
+  puts `setleds -D +num`
   pass = gets.chomp
   case web.checkPassword pass
   when WebController::GOOD_PASS
