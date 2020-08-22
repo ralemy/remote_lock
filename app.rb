@@ -1,4 +1,5 @@
 require './controller/pi_controller'
+require './controller/web_controller'
 require 'rpi_gpio'
 
 controller = PiController.new RPi::GPIO
