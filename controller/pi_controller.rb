@@ -21,25 +21,29 @@ class PiController
     [@PIN_LED_RED, @PIN_LED_GREEN, @PIN_LED_BLUE, @PIN_LED_YELLOW,
       @PIN_LOCK].each { |p| @gpioLib.setup p, :as => :output }
     [@PIN_DOOR,  @PIN_BTN].each { |p| @gpioLib.setup p, :as => :input }
+    set_callbacks
   end
 
   def set_callbacks
     controller = self
     @gpioLib.watch @PIN_BTN, :on => :rising do |pin, value|
-       controller.unlock!
+      puts "btn clicked" 
+      controller.unlock!
     end
     @gpioLib.watch @PIN_DOOR, :on => :both do |pin, value|
+      puts (value == 0 ? "door opened" : "door closed")
       controller.door_status value
     end
   end
 
   def door_status(value)
     controller = self
-    mutex.synchronize do
-      @thread.exit if @thread.alive
+    @mutex.synchronize do
+      @thread.exit if @thread.alive?
+      return if value == 0
       @thread = Thread.new do
         sleep 2
-        controller.lock! if value == 1 
+        controller.lock! 
       end
     end
   end
@@ -68,5 +72,18 @@ class PiController
   def unlock!
     @gpioLib.set_low @PIN_LOCK
     set_led @PIN_LED_GREEN
+  end
+
+  def cleanup
+    @thread.exit if @thread.alive?
+    @gpioLib.reset
+  end
+ 
+  def set_red
+    set_led(@PIN_LED_RED)
+  end
+
+  def set_yellow
+    set_led(@PIN_LED_YELLOW)
   end
  end

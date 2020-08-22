@@ -119,6 +119,52 @@ RSpec.describe PiController do
        end
      @controller.set_callbacks 
    end
+  end
+  describe ".door_status" do
+    it "should synchronize on the mutex" do
+      expect(get_pin.call(:@mutex)).to receive(:synchronize).with(no_args)
+      @controller.door_status 1
+    end
+    describe "synchronized block" do
+      before(:each) do
+        allow(Kernel).to receive(:sleep)
+      end 
 
+      def set_door(ctrl, value)
+        allow(ctrl.instance_variable_get(:@mutex)).to receive(:synchronize)
+            .with(no_args) do |&sync|
+               sync.call
+             end
+        ctrl.door_status value
+      end
+
+      it "should exit thread if it is alive" do
+        thread = get_pin.call(:@thread)
+        expect(thread).to receive(:alive?).and_return(true)
+        expect(thread).to receive(:exit)
+        expect(Thread).to_not receive(:new)
+        set_door(@controller, 0) 
+      end
+
+      it "should creae a thread when door closes that locks the door" do
+        thread = get_pin.call(:@thread)
+        expect(thread).to receive(:alive?).and_return(false)
+        expect(thread).to_not receive(:exit)
+        expect(Thread).to receive(:new).with(no_args) do |&worker|
+	   expect_any_instance_of(Kernel).to receive(:sleep).with(2)
+           expect(@controller).to receive(:lock!)
+           worker.call
+        end
+        set_door(@controller, 1) 
+        
+#        expect(@controller).to receive(:lock!)
+#        expect(Thread).to receive(:new).with(no_args) do |&worker|
+#          worker.call
+#        end
+#        call_block(@controller, 1) do |sync|
+#          sync.call
+#        end
+      end
+    end
   end
 end
