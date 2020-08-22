@@ -3,6 +3,9 @@ GEM
   specs:
     diff-lcs (1.4.4)
     epoll (0.3.0)
+    faraday (1.0.1)
+      multipart-post (>= 1.2, < 3)
+    multipart-post (2.1.1)
     rpi_gpio (0.5.0)
       epoll (~> 0.3)
     rspec (3.9.0)
@@ -23,6 +26,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  faraday
   rpi_gpio
   rspec
   rspec-mocks

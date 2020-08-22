@@ -1,37 +1,31 @@
+
 class PiController
-  def initialize(gpioLib)
-    @gpioLib = gpioLib
+  LED_PINS = [
+      RED_PIN = 7, GREEN_PIN = 11, BLUE_PIN = 13, YELLOW_PIN=15,
+      LOCK_PIN=16, BTN_PIN=18, DOOR_PIN = 22]
+
+  def initialize(gpio)
+    @gpio = gpio
     @mutex = Mutex.new
     @thread = Thread.new {}
     set_gpio
-  end  
+  end
 
   def set_gpio
-    @gpioLib.reset
-    @gpioLib.set_numbering :board
-
-    @PIN_LED_RED = 7
-    @PIN_LED_GREEN = 11
-    @PIN_LED_BLUE = 13
-    @PIN_LED_YELLOW = 15
-    @PIN_BTN = 18
-    @PIN_LOCK = 16
-    @PIN_DOOR = 22
-
-    [@PIN_LED_RED, @PIN_LED_GREEN, @PIN_LED_BLUE, @PIN_LED_YELLOW,
-      @PIN_LOCK].each { |p| @gpioLib.setup p, :as => :output }
-    [@PIN_DOOR,  @PIN_BTN].each { |p| @gpioLib.setup p, :as => :input }
+    @gpio.reset
+    @gpio.set_numbering :board
+    [RED_PIN, GREEN_PIN, BLUE_PIN, YELLOW_PIN, LOCK_PIN]
+        .each { |p| @gpio.setup p, :as => :output }
+    [DOOR_PIN, BTN_PIN].each { |p| @gpio.setup p, :as => :input }
     set_callbacks
   end
 
   def set_callbacks
     controller = self
-    @gpioLib.watch @PIN_BTN, :on => :rising do |pin, value|
-      puts "btn clicked" 
+    @gpio.watch BTN_PIN, :on => :rising do |_, value|
       controller.unlock!
     end
-    @gpioLib.watch @PIN_DOOR, :on => :both do |pin, value|
-      puts (value == 0 ? "door opened" : "door closed")
+    @gpio.watch DOOR_PIN, :on => :both do |_, value|
       controller.door_status value
     end
   end
@@ -43,47 +37,47 @@ class PiController
       return if value == 0
       @thread = Thread.new do
         sleep 2
-        controller.lock! 
+        controller.lock!
       end
     end
   end
 
   def set_led(led)
-    [@PIN_LED_RED, @PIN_LED_GREEN, @PIN_LED_BLUE, @PIN_LED_YELLOW].each do |l|
-      @gpioLib.send(l == led ? :set_high : :set_low, l)
+    [RED_PIN, BLUE_PIN, GREEN_PIN, YELLOW_PIN].each do |l|
+      @gpio.send(l == led ? :set_high : :set_low, l)
     end
   end
 
   def locked?
-    return @gpioLib.high? @PIN_LOCK
+    @gpio.high? LOCK_PIN
   end
 
   def closed?
-    return @gpioLib.high? @PIN_DOOR
+    @gpio.high? DOOR_PIN
   end
 
   def lock!
     return if locked?
     return unless closed?
-    @gpioLib.set_high @PIN_LOCK
-    set_led @PIN_LED_BLUE
+    @gpio.set_high LOCK_PIN
+    set_led BLUE_PIN
   end
 
   def unlock!
-    @gpioLib.set_low @PIN_LOCK
-    set_led @PIN_LED_GREEN
+    @gpio.set_low LOCK_PIN
+    set_led GREEN_PIN
   end
 
   def cleanup
     @thread.exit if @thread.alive?
-    @gpioLib.reset
+    @gpio.reset
   end
- 
+
   def set_red
-    set_led(@PIN_LED_RED)
+    set_led(RED_PIN)
   end
 
   def set_yellow
-    set_led(@PIN_LED_YELLOW)
+    set_led(YELLOW_PIN)
   end
- end
+end
